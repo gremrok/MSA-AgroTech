@@ -1,0 +1,52 @@
+@startuml Диаграмма C1: SaaS Platform
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C1: SaaS Platform
+
+Person(tenant_admin, "Администратор клиента", "Управляет фермами через портал самообслуживания")
+Person(tenant_user, "Пользователь клиента", "Ветеринар, оператор фермы")
+Person(integrator, "Интегратор", "Настраивает интеграции через API")
+Person(platform_admin, "Администратор платформы", "Управляет платформой, мониторинг")
+
+System_Boundary(saas_platform, "SaaS Platform") {
+    System(client_portal, "Портал самообслуживания", "React + Micro-frontends", "Управление аккаунтом, фермами, пользователями")
+    System(api_platform, "API Platform", "Backend Services", "Публичное API для интеграций")
+    System(billing_system, "Система биллинга", "Микросервисы", "Тарификация, платежи, счета")
+    System(tenant_management, "Tenant Management", "Control Plane", "Управление инстансами клиентов")
+    
+    System_Boundary(multitenant_backend, "Мультитенантный бэкенд") {
+        System(shared_services, "Общие сервисы", "Auth, Notifications, Analytics", "Общие для всех клиентов")
+        System(smb_tenants, "SMB Клиенты", "Database per Tenant", "Клиенты до 10 ферм")
+        System(enterprise_tenants, "Enterprise Клиенты", "Instance per Tenant", "Клиенты 10+ ферм")
+    }
+}
+
+System_Ext(tenant_farms, "Фермы клиентов") {
+    System(farm_servers, "Ферменные серверы", "Edge computing", "На каждой ферме клиента")
+    System(iot_devices, "Устройства IoT", "Камеры, датчики, контроллеры", "Оборудование на фермах")
+}
+
+System_Ext(integration_partners, "Партнеры и интеграции") {
+    System(payment_gateways, "Платежные системы", "Сбер, ТБанк")
+    System(client_erp, "ERP системы клиентов", "1С, SAP, другие")
+    System(ml_partners, "ML партнеры", "Поставщики моделей ИИ")
+}
+
+' Связи
+Rel(tenant_admin, client_portal, "Управление аккаунтом", "HTTPS")
+Rel(tenant_user, client_portal, "Работа с данными", "HTTPS")
+Rel(integrator, api_platform, "Интеграция через API", "HTTPS/REST")
+Rel(platform_admin, tenant_management, "Администрирование платформы", "Admin UI")
+
+Rel(client_portal, tenant_management, "Создание/управление инстансом", "REST API")
+Rel(client_portal, billing_system, "Управление подпиской, платежи", "REST API")
+Rel(api_platform, multitenant_backend, "Обработка запросов клиентов", "gRPC/HTTP")
+
+Rel(farm_servers, multitenant_backend, "Синхронизация данных", "MQTT/HTTPS")
+Rel(iot_devices, farm_servers, "Локальная обработка", "RTSP/MQTT/LoRa")
+
+Rel(billing_system, payment_gateways, "Обработка платежей", "HTTPS")
+Rel(api_platform, client_erp, "Экспорт данных", "API Webhooks")
+Rel(ml_partners, shared_services, "Обновление моделей ИИ", "HTTPS")
+
+@enduml

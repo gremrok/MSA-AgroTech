@@ -1,0 +1,36 @@
+@startuml Диаграмма C2: API и интеграции
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C2: API Gateway и Dev Portal
+
+System_Boundary(api_platform, "API Platform") {
+    Container(api_gateway, "API Gateway", "Kong Enterprise", "Маршрутизация, rate limiting, аутентификация")
+    Container(dev_portal, "Developer Portal", "Stoplight/Redocly", "Документация, sandbox, ключи API")
+    Container(api_analytics, "API Analytics", "Go", "Сбор метрик использования API")
+    Container(auth_service, "Auth Service", "Keycloak", "OAuth2, API Keys, JWT")
+}
+
+System_Boundary(backend_services, "Backend Services") {
+    Container(herd_api, "Herd API", "C#", "Управление поголовьем")
+    Container(feeding_api, "Feeding API", "Go", "Управление кормлением")
+    Container(health_api, "Health API", "Python", "Данные о здоровье")
+    Container(events_api, "Events API", "Java", "События в реальном времени")
+}
+
+System_Ext(client_systems, "Системы клиентов") {
+    Container(client_erp, "ERP клиента", "1С/SAP")
+    Container(client_bi, "BI клиента", "Power BI/Tableau")
+    Container(custom_app, "Кастомное приложение", "Любая платформа")
+}
+
+' Связи
+Rel(client_systems, api_gateway, "API вызовы", "HTTPS/REST/GraphQL")
+Rel(api_gateway, herd_api, "Маршрутизация запросов", "HTTP/2")
+Rel(api_gateway, auth_service, "Валидация токенов", "OAuth2 Introspection")
+Rel(api_gateway, api_analytics, "Логи вызовов", "async")
+Rel(dev_portal, api_gateway, "Управление ключами", "Admin API")
+Rel(dev_portal, client_systems, "Документация для интеграторов", "HTTPS")
+
+' Особенности API
+'Note over api_gateway: **Поддерживаемые форматы:**\n- REST API (OpenAPI 3.0)\n- GraphQL для сложных запросов\n- WebSocket для реального времени\n- Webhooks для событий
+@enduml

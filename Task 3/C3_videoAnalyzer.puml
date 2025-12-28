@@ -1,0 +1,44 @@
+@startuml Диаграмма C3: Компоненты Farm Server Video Analyzer
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Title Диаграмма C3: Farm Server - Video Analyzer Component
+
+Container(video_analyzer, "Video Analyzer", "Python (FastAPI)", "Обработка видеопотоков в реальном времени")
+
+' Внешние зависимости
+Container(camera1, "Камера 1", "RTSP", "Видеопоток зона 1")
+Container(camera2, "Камера N", "RTSP", "Видеопоток зона N")
+Container(redis_pubsub, "Redis Pub/Sub", "Redis", "Локальная шина событий")
+Container(farm_db, "Local PostgreSQL", "Database", "Локальное хранилище")
+Container(model_repo, "Model Repository", "S3/HTTP", "Хранилище моделей ИИ")
+
+' Внутренние компоненты
+Component(stream_manager, "Stream Manager", "Python", "Управление подключениями к камерам")
+Component(frame_processor, "Frame Processor", "Python + OpenCV", "Обработка кадров, препроцессинг")
+Component(ai_inference, "AI Inference Engine", "Python + TensorRT", "Выполнение нейросетевых моделей")
+Component(object_tracker, "Object Tracker", "Python", "Трекинг животных между кадрами")
+Component(behavior_analyzer, "Behavior Analyzer", "Python", "Анализ поведения в реальном времени")
+Component(event_detector, "Event Detector", "Python", "Детекция значимых событий")
+Component(api, "Local API", "FastAPI", "Управление и мониторинг")
+Component(metrics_collector, "Metrics Collector", "Python", "Сбор метрик производительности")
+
+' Внутренние связи
+Rel(stream_manager, frame_processor, "Кадры для обработки", "Queue (multiprocessing)")
+Rel(frame_processor, ai_inference, "Преобработанные кадры", "Shared memory")
+Rel(ai_inference, object_tracker, "Результаты детекции", "Structured data")
+Rel(object_tracker, behavior_analyzer, "Треки объектов", "Stream")
+Rel(behavior_analyzer, event_detector, "Паттерны поведения", "Direct call")
+Rel(event_detector, redis_pubsub, "Публикация событий", "Redis publish")
+
+' Связи с внешними системами
+Rel(stream_manager, camera1, "Подключение к RTSP", "RTSP client")
+Rel(stream_manager, camera2, "Подключение к RTSP", "RTSP client")
+Rel(ai_inference, model_repo, "Загрузка моделей", "HTTPS (периодически)")
+Rel(metrics_collector, farm_db, "Сохранение метрик", "SQL")
+Rel(api, farm_db, "Статус и конфигурация", "SQL")
+Rel(event_detector, farm_db, "Логирование событий", "SQL async")
+
+' Поток обработки
+'Note over stream_manager, event_detector: **Основной поток обработки:**\nКамера → Frame Processing → AI → Tracking → Behavior → Events → Redis
+
+@enduml

@@ -1,0 +1,47 @@
+@startuml Диаграмма C3: Компоненты Animal Health Service
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Title Диаграмма C3: Animal Health Service - Детализация компонентов
+
+Container(health_service, "Animal Health Service", "Python (Django)", "Анализ поведения и здоровья животных")
+
+' Внешние зависимости
+ContainerDb(postgres, "PostgreSQL", "Relational Database", "Основные данные о животных и событиях")
+ContainerDb(redis, "Redis", "In-memory Cache", "Кэш моделей и временных данных")
+Container(queue, "RabbitMQ", "Message Broker", "Асинхронные задачи и события")
+Container(event_bus, "Event Bus (Kafka)", "Event Streaming", "Публикация бизнес-событий")
+
+' Компоненты внутри сервиса
+Component(behavior_analyzer, "Behavior Analyzer", "Python", "Анализ поведенческих паттернов")
+Component(disease_detector, "Disease Detector", "Python", "Детекция признаков болезней")
+Component(health_scoring, "Health Scoring Engine", "Python", "Расчет индексов здоровья")
+Component(alert_generator, "Alert Generator", "Python", "Генерация предупреждений")
+Component(veterinary_records, "Veterinary Records Manager", "Python", "Управление ветеринарными записями")
+Component(api, "REST API", "Django REST Framework", "Внешний интерфейс")
+Component(data_processor, "Data Processing Worker", "Celery Worker", "Асинхронная обработка")
+Component(event_handler, "Event Handler", "Python", "Обработка входящих событий")
+
+' Внутренние связи
+Rel(api, behavior_analyzer, "Вызов анализа", "Direct call")
+Rel(api, disease_detector, "Запрос диагностики", "Direct call")
+Rel(api, veterinary_records, "CRUD операции", "Direct call")
+Rel(event_handler, data_processor, "Постановка задач", "Celery task")
+Rel(data_processor, health_scoring, "Расчет скоров", "Direct call")
+Rel(health_scoring, alert_generator, "Триггеры оповещений", "Direct call")
+
+' Связи с внешними системами
+Rel(behavior_analyzer, postgres, "Чтение/запись данных", "SQL")
+Rel(disease_detector, redis, "Кэш моделей ML", "Redis-py")
+Rel(health_scoring, postgres, "Сохранение результатов", "SQL")
+Rel(alert_generator, queue, "Публикация оповещений", "Pika")
+Rel(veterinary_records, postgres, "Управление записями", "SQL")
+Rel(event_handler, event_bus, "Чтение событий", "Kafka-Python")
+Rel(api, postgres, "Доступ к данным", "Django ORM")
+
+' Поток данных
+Rel_L(event_handler, behavior_analyzer, "События поведения животных", "async")
+Rel_L(behavior_analyzer, disease_detector, "Аномалии поведения", "direct call")
+Rel_L(disease_detector, health_scoring, "Признаки болезней", "direct call")
+Rel_R(health_scoring, alert_generator, "Критичные изменения здоровья", "direct call")
+
+@enduml

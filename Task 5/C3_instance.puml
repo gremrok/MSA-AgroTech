@@ -1,0 +1,34 @@
+@startuml Диаграмма C2: Изоляция на уровне инстансов
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C2: Мультитенантность - отдельные инстансы
+
+System_Boundary(shared_services, "Общие сервисы") {
+    Container(control_plane, "Control Plane", "Kubernetes Operator", "Управление инстансами клиентов")
+    ContainerDb(shared_db, "Общая БД", "PostgreSQL", "Биллинг, пользователи, метаданные")
+    Container(auth_service, "Auth Service", "Keycloak", "Централизованная аутентификация")
+}
+
+System_Boundary(tenant_a, "Инстанс Клиент А") {
+    ContainerDb(db_a, "БД Клиент А", "PostgreSQL", "Полная изоляция")
+    Container(app_a, "Приложение А", "Microservices", "Деплой для конкретного клиента")
+    Container(cache_a, "Кэш А", "Redis", "Локальный кэш")
+}
+
+System_Boundary(tenant_b, "Инстанс Клиент Б") {
+    ContainerDb(db_b, "БД Клиент Б", "PostgreSQL", "Полная изоляция")
+    Container(app_b, "Приложение Б", "Microservices", "Деплой для конкретного клиента")
+    Container(cache_b, "Кэш Б", "Redis", "Локальный кэш")
+}
+
+Container(load_balancer, "Load Balancer", "NGINX", "Маршрутизация по домену/заголовку")
+
+Rel(load_balancer, app_a, "Запросы client-a.smartlivestock.io", "HTTPS")
+Rel(load_balancer, app_b, "Запросы client-b.smartlivestock.io", "HTTPS")
+Rel(control_plane, tenant_a, "Управление жизненным циклом", "K8s API")
+Rel(control_plane, tenant_b, "Управление жизненным циклом", "K8s API")
+Rel(auth_service, shared_db, "Валидация токенов", "JDBC")
+Rel_D(app_a, shared_db, "Доступ к общим данным (биллинг)", "HTTPS (ограничено)")
+Rel_D(app_b, shared_db, "Доступ к общим данным (биллинг)", "HTTPS (ограничено)")
+
+@enduml
