@@ -1,0 +1,51 @@
+@startuml Диаграмма C4: Код AI Inference Engine
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Title Диаграмма C4: AI Inference Engine - Уровень кода
+
+Component(inference_engine, "AI Inference Engine", "Python", "Основной класс для выполнения нейросетевых моделей")
+
+' Внутренние классы/модули
+Component(ModelManager, "ModelManager", "Python class", "Управление загрузкой и версионированием моделей")
+Component(InferencePipeline, "InferencePipeline", "Python class", "Конвейер обработки: препроцессинг → инференс → постпроцессинг")
+Component(TensorRTEngine, "TensorRTEngine", "Python class", "Оптимизация и выполнение моделей через TensorRT")
+Component(CUDAContext, "CUDAContext", "Python class", "Управление GPU ресурсами")
+Component(MetricsCollector, "MetricsCollector", "Python class", "Сбор метрик latency, throughput")
+Component(CacheManager, "CacheManager", "Python class", "Кэширование результатов для похожих кадров")
+
+' Внешние зависимости
+Component(numpy, "NumPy", "Library", "Работа с массивами")
+Component(pycuda, "PyCUDA", "Library", "Доступ к CUDA API")
+Component(tensorrt, "TensorRT", "Library", "Оптимизация инференса")
+Component(opencv, "OpenCV", "Library", "Обработка изображений")
+Component(redis_client, "RedisClient", "Wrapper", "Доступ к Redis")
+
+' Методы и связи
+Component(load_model, "load_model()", "method", "Загрузка модели из файла")
+Component(preprocess, "preprocess_frame()", "method", "Подготовка кадра для сети")
+Component(infer, "infer_batch()", "method", "Пакетное выполнение инференса")
+Component(postprocess, "postprocess_results()", "method", "Обработка выходов сети")
+Component(get_cached_result, "get_cached_result()", "method", "Проверка кэша")
+
+' Связи между компонентами
+Rel(ModelManager, TensorRTEngine, "Предоставляет модель", "engine instance")
+Rel(InferencePipeline, ModelManager, "Запрашивает модель", "get_model()")
+Rel(InferencePipeline, CUDAContext, "Использует GPU", "acquire_context()")
+Rel(TensorRTEngine, CUDAContext, "Выполнение на GPU", "cuda stream")
+Rel(InferencePipeline, CacheManager, "Проверка кэша", "cache lookup")
+Rel(MetricsCollector, InferencePipeline, "Сбор метрик", "decorator pattern")
+
+' Поток выполнения
+Rel(load_model, preprocess, "Модель загружена", "→")
+Rel(preprocess, infer, "Кадр подготовлен", "→")
+Rel(infer, postprocess, "Результаты получены", "→")
+Rel(get_cached_result, infer, "Кэш промах", "condition")
+
+' Внешние зависимости кода
+Rel(ModelManager, tensorrt, "Использует для загрузки", "TRT API")
+Rel(TensorRTEngine, pycuda, "Использует для выполнения", "CUDA kernels")
+Rel(preprocess, opencv, "Использует для обработки", "cv2.resize, normalize")
+Rel(CacheManager, redis_client, "Хранение кэша", "set/get")
+Rel(MetricsCollector, redis_client, "Публикация метрик", "push")
+
+@enduml

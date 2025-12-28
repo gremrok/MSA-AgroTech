@@ -1,0 +1,36 @@
+@startuml Диаграмма C2: Система биллинга и монетизации
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C2: Система биллинга и монетизации SaaS
+
+System_Boundary(billing_system, "Система биллинга и монетизации") {
+    Container(usage_collector, "Usage Collector", "Go", "Сбор метрик использования (камеры, фермы, хранилище)")
+    Container(billing_engine, "Billing Engine", "Java", "Расчет стоимости по тарифам, генерация счетов")
+    Container(subscription_manager, "Subscription Manager", "Python (Django)", "Управление подписками, тарифными планами")
+    Container(payment_processor, "Payment Processor", "Node.js", "Интеграция с платежными системами")
+    Container(invoice_service, "Invoice Service", "Java", "Генерация и управление счетами")
+    ContainerDb(billing_db, "Billing Database", "PostgreSQL", "Тарифы, счета, платежи, метрики")
+}
+
+System_Ext(payment_gateways, "Платежные шлюзы", "Российские платежные системы") {
+    Container(sber, "Сбер", "СБП, карты")
+    Container(tbank, "ТБанк", "СБП, карты")
+}
+
+Container(tenant_app, "Приложение клиента", "SmartLivestock Platform", "Генерирует события использования")
+Container(admin_portal, "Admin Portal", "React", "Панель администратора (будущая)")
+Container(client_portal, "Client Portal", "React", "Панель самообслуживания клиента")
+
+' Связи
+Rel(tenant_app, usage_collector, "События использования", "Kafka events")
+Rel(usage_collector, billing_db, "Сохранение метрик", "SQL")
+Rel(usage_collector, billing_engine, "Агрегированные метрики", "REST API")
+Rel(billing_engine, subscription_manager, "Запрос тарифного плана", "gRPC")
+Rel(billing_engine, invoice_service, "Запрос на генерацию счета", "Async (RabbitMQ)")
+Rel(invoice_service, client_portal, "Отображение счетов", "REST API")
+Rel(client_portal, payment_processor, "Инициация платежа", "REST API")
+Rel(payment_processor, payment_gateways, "Обработка платежей", "HTTPS (PCI DSS)")
+Rel(payment_processor, billing_db, "Запись результатов платежей", "SQL")
+Rel(subscription_manager, billing_db, "Управление подписками", "SQL")
+
+@enduml

@@ -1,0 +1,82 @@
+@startuml Диаграмма контейнеров C2 - Вариант 1 (Основной)
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма контейнеров C2 (Вариант 1 - основной)
+
+Person(начальник_фермы, "Начальник фермы", "Мониторинг и управление")
+Person(дежурный, "Дежурный", "Оповещения и здоровье")
+Person(инженер, "Инженер", "Обслуживание оборудования")
+
+' --- УРОВЕНЬ FARM (Edge) ---
+System_Boundary(farm, "Ферменный сервер (На каждой ферме)") {
+    Container(farm_gateway, "Farm Gateway", "Go", "Единая точка входа для edge-устройств, сбор и буферизация данных")
+    ContainerDb(farm_db, "Локальная база данных", "PostgreSQL + TimescaleDB", "Хранение метрик, событий, конфигурации (до 30 дней)")
+    Container(video_analyzer, "Video Analyzer", "Python (FastAPI + OpenCV)", "Обработка видеопотоков в реальном времени, запуск ИИ-моделей, генерация событий")
+    Container(alert_engine, "Alert Engine", "Node.js", "Обработка событий, бизнес-правила оповещений, локальные уведомления")
+    Container(device_manager, "Device Manager", "Java (Spring)", "Управление подключением устройств, протоколы (MQTT, LoRaWAN), состояние оборудования")
+}
+
+' --- УРОВЕНЬ CLOUD ---
+System_Boundary(cloud, "Облачный сервис (SmartLivestock Cloud)") {
+    Container(api_gateway, "API Gateway", "Kong/NGINX", "Маршрутизация, аутентификация, лимитирование запросов")
+    Container(herd_service, "Herd Management Service", "C# (.NET Core)", "Управление поголовьем, учет, пересчет, история перемещений")
+    Container(feeding_service, "Feeding & Watering Service", "Go", "Управление кормушками/поилками, прогноз расхода корма, мониторинг фильтров")
+    Container(health_service, "Animal Health Service", "Python (Django)", "Анализ поведения, выявление болезней, ветеринарные записи")
+    Container(notification_service, "Notification Service", "Node.js", "Рассылка оповещений (Push, SMS, Email), настройки подписок")
+    ContainerDb(cloud_db, "Cloud Database", "PostgreSQL", "Основное хранилище данных: фермы, пользователи, конфигурации")
+    ContainerDb(analytics_db, "Analytics Database", "ClickHouse", "Агрегированные метрики для отчетов и аналитики")
+    Container(sync_service, "Synchronization Service", "Java (Quarkus)", "Двусторонняя синхронизация данных между фермами и облаком")
+}
+
+' --- ВНЕШНИЕ СИСТЕМЫ ---
+System_Ext(existing_kafka, "Центральная шина Kafka (АгроТех Х)", "Apache Kafka")
+System_Ext(external_ai, "AI Model Repository", "S3/HTTP", "Хранилище моделей от партнеров")
+System_Ext(mobile_app, "Мобильное приложение", "Flutter")
+System_Ext(web_portal, "Веб-портал", "React")
+
+' --- УСТРОЙСТВА НА ФЕРМЕ ---
+Container(ai_camera, "Камера с ИИ-ускорителем", "Embedded Linux", "RTSP поток + локальная детекция")
+Container(feeder_controller, "Контроллер кормушки", "Microcontroller", "Управление дозатором, отчеты")
+Container(water_sensor, "Датчик воды", "LoRaWAN", "Качество, уровень")
+
+' --- СВЯЗИ ---
+
+' Устройства -> Farm Gateway
+Rel(ai_camera, farm_gateway, "RTSP поток + MQTT телеметрия", "RTSP, MQTT over WiFi")
+Rel(feeder_controller, farm_gateway, "Состояние, события", "MQTT/Modbus TCP")
+Rel(water_sensor, farm_gateway, "Показания датчиков", "LoRaWAN -> Gateway")
+
+' Внутри фермы
+Rel(farm_gateway, video_analyzer, "Передает видеопотоки", "gRPC stream")
+Rel(farm_gateway, farm_db, "Сохраняет сырые данные", "SQL")
+Rel(video_analyzer, alert_engine, "События детекции", "Redis Pub/Sub")
+Rel(alert_engine, farm_db, "Записывает оповещения", "SQL")
+Rel(device_manager, farm_gateway, "Конфигурация устройств", "REST API")
+Rel(video_analyzer, external_ai, "Загрузка/обновление моделей", "HTTPS (периодически)")
+
+' Ферма <-> Облако
+Rel(alert_engine, sync_service, "Отправка важных событий", "HTTPS/MQTT с QoS=1")
+Rel(sync_service, farm_db, "Чтение/запись при синхронизации", "SQL")
+Rel(sync_service, cloud_db, "Синхронизация агрегированных данных", "SQL")
+
+' Облачные сервисы
+Rel(api_gateway, herd_service, "Маршрутизация запросов", "HTTP/2")
+Rel(api_gateway, feeding_service, "Маршрутизация запросов", "HTTP/2")
+Rel(api_gateway, health_service, "Маршрутизация запросов", "HTTP/2")
+Rel(herd_service, cloud_db, "Основные данные", "SQL")
+Rel(feeding_service, analytics_db, "Метрики расхода", "SQL")
+Rel(health_service, notification_service, "Запрос на оповещение", "Async (RabbitMQ)")
+Rel(notification_service, mobile_app, "Push-уведомления", "Firebase Cloud Messaging")
+
+' Интеграции
+Rel(sync_service, existing_kafka, "Публикация бизнес-событий", "Kafka Protocol")
+Rel(herd_service, existing_kafka, "События по поголовью", "Kafka Protocol")
+
+' Пользователи
+Rel(начальник_фермы, web_portal, "Работает через", "HTTPS")
+Rel(дежурный, mobile_app, "Получает уведомления", "Push")
+Rel(инженер, mobile_app, "Локальные задачи", "HTTPS")
+Rel(web_portal, api_gateway, "Запросы к API", "GraphQL/REST")
+Rel(mobile_app, api_gateway, "Запросы к API", "REST")
+
+@enduml

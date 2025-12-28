@@ -1,0 +1,22 @@
+@startuml Диаграмма C3: Изоляция на уровне схем БД
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C3: Мультитенантность - отдельные схемы
+
+ContainerDb(main_db, "Основная PostgreSQL", "Database", "Все данные клиентов в одном инстансе")
+
+Container(tenant_schema_1, "Схема Клиент А", "PostgreSQL Schema", "Данные ферм, животных, событий")
+Container(tenant_schema_2, "Схема Клиент Б", "PostgreSQL Schema", "Данные ферм, животных, событий")
+Container(tenant_schema_n, "Схема Клиент N", "PostgreSQL Schema", "Данные ферм, животных, событий")
+
+Container(shared_schema, "Общая схема", "PostgreSQL Schema", "Пользователи, подписки, метрики использования")
+
+Container(app_service, "Сервис приложения", "Microservice", "Обрабатывает запросы с tenant_id")
+
+Rel(app_service, main_db, "Подключение к БД", "JDBC/ORM")
+Rel(main_db, tenant_schema_1, "Внутренняя изоляция", "SQL Schema")
+Rel(main_db, tenant_schema_2, "Внутренняя изоляция", "SQL Schema")
+Rel(main_db, tenant_schema_n, "Внутренняя изоляция", "SQL Schema")
+Rel(main_db, shared_schema, "Общие данные", "SQL Schema")
+
+@enduml

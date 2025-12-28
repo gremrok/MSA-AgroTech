@@ -1,0 +1,21 @@
+@startuml Диаграмма C3: Изоляция на уровне отдельных БД
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Title Диаграмма C3: Мультитенантность - отдельные БД
+
+ContainerDb(db_client_a, "БД Клиент А", "PostgreSQL", "Полностью изолированные данные")
+ContainerDb(db_client_b, "БД Клиент Б", "PostgreSQL", "Полностью изолированные данные")
+ContainerDb(db_client_n, "БД Клиент N", "PostgreSQL", "Полностью изолированные данные")
+
+ContainerDb(shared_db, "Общая БД", "PostgreSQL", "Метаданные, пользователи, биллинг")
+
+Container(tenant_router, "Tenant Router", "Go", "Маршрутизация запросов к нужной БД")
+Container(app_service, "Сервис приложения", "Microservice", "Бизнес-логика без tenant_id в запросах")
+
+Rel(app_service, tenant_router, "Запрос с tenant_id", "HTTP/gRPC")
+Rel(tenant_router, db_client_a, "Подключение к БД клиента", "Connection Pool")
+Rel(tenant_router, db_client_b, "Подключение к БД клиента", "Connection Pool")
+Rel(tenant_router, db_client_n, "Подключение к БД клиента", "Connection Pool")
+Rel(tenant_router, shared_db, "Метаданные и аутентификация", "JDBC")
+
+@enduml

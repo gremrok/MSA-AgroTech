@@ -1,0 +1,56 @@
+@startuml Диаграмма C4: Код Synchronization Service
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Title Диаграмма C4: Synchronization Service - Уровень кода
+
+Component(sync_service, "Synchronization Service", "Java (Quarkus)", "Двусторонняя синхронизация ферма-облако")
+
+' Основные классы
+Component(SyncOrchestrator, "SyncOrchestrator", "Java class", "Оркестрация процесса синхронизации")
+Component(ConflictResolver, "ConflictResolver", "Java class", "Разрешение конфликтов данных")
+Component(DataTransformer, "DataTransformer", "Java class", "Трансформация форматов данных")
+Component(QueueManager, "QueueManager", "Java class", "Управление очередями сообщений")
+Component(HealthMonitor, "HealthMonitor", "Java class", "Мониторинг состояния соединений")
+
+' Стратегии синхронизации
+Component(FullSyncStrategy, "FullSyncStrategy", "Java class", "Полная синхронизация при первом подключении")
+Component(IncrementalSyncStrategy, "IncrementalSyncStrategy", "Java class", "Инкрементальная синхронизация изменений")
+Component(PrioritySyncStrategy, "PrioritySyncStrategy", "Java class", "Приоритетная синхронизация критичных данных")
+
+' Внешние адаптеры
+Component(FarmAPIAdapter, "FarmAPIAdapter", "Java class", "Адаптер к API фермы")
+Component(CloudDBAdapter, "CloudDBAdapter", "Java class", "Адаптер к облачной БД")
+Component(KafkaProducer, "KafkaProducer", "Java class", "Публикация событий в Kafka")
+Component(MQTTClient, "MQTTClient", "Java class", "Подключение к MQTT брокеру фермы")
+
+' Сервисные компоненты
+Component(RetryManager, "RetryManager", "Java class", "Управление повторными попытками")
+Component(CompressionService, "CompressionService", "Java class", "Сжатие данных для передачи")
+Component(EncryptionService, "EncryptionService", "Java class", "Шифрование чувствительных данных")
+
+' Связи и зависимости
+Rel(SyncOrchestrator, FullSyncStrategy, "Использует при инициализации", "strategy pattern")
+Rel(SyncOrchestrator, IncrementalSyncStrategy, "Использует для регулярной синх", "strategy pattern")
+Rel(SyncOrchestrator, PrioritySyncStrategy, "Использует для оповещений", "strategy pattern")
+
+Rel(FullSyncStrategy, FarmAPIAdapter, "Запрашивает данные", "HTTP client")
+Rel(IncrementalSyncStrategy, MQTTClient, "Слушает изменения", "MQTT subscription")
+Rel(PrioritySyncStrategy, QueueManager, "Получает приоритетные сообщения", "priority queue")
+
+Rel(FarmAPIAdapter, DataTransformer, "Трансформация данных фермы", "DTO mapping")
+Rel(CloudDBAdapter, DataTransformer, "Трансформация данных облака", "DTO mapping")
+
+Rel(DataTransformer, ConflictResolver, "Проверка конфликтов", "version check")
+Rel(ConflictResolver, SyncOrchestrator, "Отчет о конфликтах", "conflict report")
+
+Rel(RetryManager, FarmAPIAdapter, "Обработка сетевых ошибок", "retry with backoff")
+Rel(CompressionService, FarmAPIAdapter, "Сжатие отправляемых данных", "gzip")
+Rel(EncryptionService, FarmAPIAdapter, "Шифрование данных", "AES-GCM")
+
+Rel(SyncOrchestrator, KafkaProducer, "Публикация событий синхронизации", "async send")
+Rel(HealthMonitor, SyncOrchestrator, "Отчет о состоянии", "health check")
+
+' Поток данных синхронизации
+'Note over FullSyncStrategy, CloudDBAdapter: **Поток полной синхронизации:**\nFarm → API Adapter → Transform → Conflict Check → Cloud DB → Kafka
+
+@enduml
